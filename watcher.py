@@ -167,10 +167,26 @@ class Daemon:
         daemonized by start() or restart().
         """
 
+
+def eventBefore(fn):
+
+  def wrapper(*args, **kw):
+    handler = args[0]
+    event = args[1]
+
+    if event.pathname not in handler.skip:
+      return fn(*args, **kw)
+    else:
+      print "Skipped: " + event.pathname
+
+  return wrapper
+
+
 class EventHandler(pyinotify.ProcessEvent):
-    def __init__(self, command):
+    def __init__(self, command, skip):
         pyinotify.ProcessEvent.__init__(self)
         self.command = command
+        self.skip = skip
 
     # from http://stackoverflow.com/questions/35817/how-to-escape-os-system-calls-in-python
     def shellquote(self,s):
@@ -188,46 +204,57 @@ class EventHandler(pyinotify.ProcessEvent):
         except OSError, err:
             print "Failed to run command '%s' %s" % (command, str(err))
 
+    @eventBefore
     def process_IN_ACCESS(self, event):
         print "Access: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_ATTRIB(self, event):
         print "Attrib: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_CLOSE_WRITE(self, event):
         print "Close write: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_CLOSE_NOWRITE(self, event):
         print "Close nowrite: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_CREATE(self, event):
         print "Creating: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_DELETE(self, event):
         print "Deleteing: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_MODIFY(self, event):
         print "Modify: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_MOVE_SELF(self, event):
         print "Move self: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_MOVED_FROM(self, event):
         print "Moved from: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_MOVED_TO(self, event):
         print "Moved to: ", event.pathname
         self.runCommand(event)
 
+    @eventBefore
     def process_IN_OPEN(self, event):
         print "Opened: ", event.pathname
         self.runCommand(event)
@@ -254,11 +281,15 @@ class WatcherDaemon(Daemon):
             folder    = self.config.get(section,'watch')
             recursive = self.config.getboolean(section,'recursive')
             autoadd   = self.config.getboolean(section,'autoadd')
+            skip      = self.config.get(section, 'skip').split(',')
             command   = self.config.get(section,'command')
+#BP1
+            base_dir = folder.rstrip('/') + '/';
+            skip  = [base_dir + i for i in skip]; 
 
             wm = pyinotify.WatchManager()
-            handler = EventHandler(command)
-
+            handler = EventHandler(command, skip)
+#EBP
             wdds.append(wm.add_watch(folder, mask, rec=recursive,auto_add=autoadd))
             # BUT we need a new ThreadNotifier so I can specify a different
             # EventHandler instance for each job
