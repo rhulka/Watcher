@@ -283,13 +283,13 @@ class WatcherDaemon(Daemon):
             autoadd   = self.config.getboolean(section,'autoadd')
             skip      = self.config.get(section, 'skip').split(',')
             command   = self.config.get(section,'command')
-#BP1
+            
             base_dir = folder.rstrip('/') + '/';
             skip  = [base_dir + i for i in skip]; 
 
             wm = pyinotify.WatchManager()
             handler = EventHandler(command, skip)
-#EBP
+            
             wdds.append(wm.add_watch(folder, mask, rec=recursive,auto_add=autoadd))
             # BUT we need a new ThreadNotifier so I can specify a different
             # EventHandler instance for each job
